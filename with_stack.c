@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-// #define USE_FLOAT
+#define USE_FLOAT
 
 // PAZNJA: ne moze boolean algebra sa floating-om da radi
 // #define USE_BOOLEAN
@@ -16,6 +16,9 @@ typedef float NumType;
 typedef int NumType;
 #define VAL_FORMAT "%d"
 #endif
+
+
+char error[100];
 
 // stack i liste
 typedef struct list_elem {
@@ -168,6 +171,10 @@ NumType eval_operator(char op, NumType num1, NumType num2) {
 		case '*':
 			return num1*num2;
 		case '/':
+			if(num2 == 0) {
+				sprintf(error, "deljenje sa 0\n");
+				return 99999;
+			}
 			return num1/num2;
 		case '^':
 			return pow(num1,num2);
@@ -243,7 +250,7 @@ int op_priority(char op) {
 
 ////////
 
-char error[100];
+
 
 List tokenize(char* expr) {
 	List res;
@@ -264,7 +271,6 @@ List tokenize(char* expr) {
 			oper = op_get(c|F_UNARY);
 		}
 		
-		// printf("tok %c %s\n", c, oper ? "is op" : "is num");
 		if(oper) { // operator
 			char op = oper->op;
 			if(isunary && op != '(' && op != ')') {
@@ -285,8 +291,7 @@ List tokenize(char* expr) {
 			}
 			
 			list_append(&res, 0, op);
-		} else if(c >= '0' && c <= '9') { // broj
-			
+		} else if(c >= '0' && c <= '9' || c == '.') { // broj
 			NumType r = 0;
 			int base = 10;
 			
@@ -300,8 +305,9 @@ List tokenize(char* expr) {
 				} else if(*expr == 'b') { // 0b.. binarni broj
 					base = 2;
 					expr++;
-				} else {
-					sprintf(error, "greska broj");
+				} else if(*expr != '.') {
+					sprintf(error, "greska broj\n");
+					return res;
 				}
 			}
 			
@@ -320,6 +326,7 @@ List tokenize(char* expr) {
 				if(n >= base) {
 					// error = GreskaBaza;
 					sprintf(error, "greska baza\n");
+					return res;
 				}
 				r = base*r + n;
 				zeros *= base;
@@ -334,6 +341,7 @@ List tokenize(char* expr) {
 			isunary = 0;
 		} else {
 			sprintf(error, "ne postoji operator %c\n", c);
+			return res;
 		}
 		expr++;
 	}
@@ -582,12 +590,14 @@ void main( int argc, char *argv[]) {
 			continue;
 		}
 		
-		printf("doing %s\n", linija);
+		
 		
 		error[0]=0;
 		// izrazZaRacun = linija;
 		
 		linija[strlen(linija)-1] = 0; // \n -> \0
+		
+		// printf("calculating %s\n", linija);
 		
 		List tokens = tokenize(linija);
 		// if(strlen(error) > 0) {
@@ -602,14 +612,17 @@ void main( int argc, char *argv[]) {
 		if(error[0] == 0) {
 			NumType rez = eval_postfix(infix_to_postfix(tokens));
 			izrazi[izr].vrednost = rez;
-			// = <resenje>
-			char tmp[100];
 			
-			broj_u_string(rez, tmp, 10, 3);
-			// printf("%f %s\n", rez, tmp);
-			sprintf(linija, " = %s\n", tmp);
-			
-		} else {
+			if(error[0] == 0) {
+				// = <resenje>
+				char tmp[100];
+				
+				broj_u_string(rez, tmp, 10, 3);
+				// printf("%f %s\n", rez, tmp);
+				sprintf(linija, " = %s\n", tmp);
+			}
+		}
+		if(error[0] != 0) {
 			// ; <greska>
 			sprintf(linija, " ; greska na liniji %d : %s", line, error);
 		}
@@ -632,6 +645,7 @@ void main( int argc, char *argv[]) {
 	
 	for(i=0; i < izr; i++) {
 		fputs(izrazi[i].ispis, f2);
+		printf("%s", (izrazi[i].ispis));
 	}
 	
 	fclose(f2);
