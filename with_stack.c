@@ -573,8 +573,15 @@ struct Izraz {
 struct Izraz izrazi[100];
 
 void main( int argc, char *argv[]) {
-	FILE* f = fopen("izrazi.txt", "r");
-	FILE* f2 = fopen("izrazi2.txt", "w");
+	
+	if(argc < 2) {
+		printf("pravilan unos\n");
+		printf("\tprogram <ime_fajla>\n");
+		return;
+	}
+	
+	FILE* f = fopen(argv[1], "r");
+	// FILE* f2 = fopen("izrazi2.txt", "w");
 	
 	char linija[MAX];
 	if(!f) {
@@ -590,21 +597,13 @@ void main( int argc, char *argv[]) {
 			continue;
 		}
 		
-		
-		
 		error[0]=0;
-		// izrazZaRacun = linija;
 		
 		linija[strlen(linija)-1] = 0; // \n -> \0
-		
 		// printf("calculating %s\n", linija);
 		
 		List tokens = tokenize(linija);
-		// if(strlen(error) > 0) {
-			// printf("Greska tokenizacija: %s\n", error);
-			// continue;
-		// }
-		
+
 		// format:
 		// <izraz> = <resenje>
 		strcpy(izrazi[izr].ispis, linija);
@@ -616,9 +615,7 @@ void main( int argc, char *argv[]) {
 			if(error[0] == 0) {
 				// = <resenje>
 				char tmp[100];
-				
 				broj_u_string(rez, tmp, 10, 3);
-				// printf("%f %s\n", rez, tmp);
 				sprintf(linija, " = %s\n", tmp);
 			}
 		}
@@ -631,7 +628,7 @@ void main( int argc, char *argv[]) {
 	}
 	fclose(f);
 	
-	// sortiranje
+	// sortiranje resenja
 	int i,j;
 	for(i=0; i < izr; i++) {
 		for(j=i; j < izr; j++) {
@@ -643,10 +640,12 @@ void main( int argc, char *argv[]) {
 		}
 	}
 	
+	printf("Fajl %s sadrzi %d izraza\n", argv[1], izr);
+	printf("----------------\n");
 	for(i=0; i < izr; i++) {
-		fputs(izrazi[i].ispis, f2);
+		// fputs(izrazi[i].ispis, f2);
 		printf("%s", (izrazi[i].ispis));
 	}
 	
-	fclose(f2);
+	// fclose(f2);
 }

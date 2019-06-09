@@ -1,37 +1,6 @@
--5/(-3+3+.01) = -500
-(-(-(-4+2)*(4+3)^2)+1) = -97
--4 = -4
-4^(3-ln((e^2)^2) ; greska na liniji 5 : ne postoji operator l
-2f ; greska na liniji 7 : greska baza
-sin(pi*3/2) ; greska na liniji 8 : ne postoji operator s
-0742454 ; greska na liniji 10 : greska broj
-deg(pi/2) ; greska na liniji 2 : ne postoji operator d
-0129 ; greska na liniji 13 : greska broj
-77f ; greska na liniji 14 : greska baza
-ln(e^5) ; greska na liniji 15 : ne postoji operator l
-cos(0) ; greska na liniji 16 : ne postoji operator c
-cosh(0) ; greska na liniji 17 : ne postoji operator c
-sin(x -> inf) ; greska na liniji 18 : ne postoji operator s
-(56+87**5/5*7^(5-6)) ; greska na liniji 20 : ne postoji unarni operator *
-(5+*2/5*7^1/5)^2 ; greska na liniji 22 : ne postoji unarni operator *
-/// ; greska na liniji 27 : fali broj nakon operatora
-- ; greska na liniji 28 : fali broj nakon operatora
-*/kjhjghjg ; greska na liniji 29 : ne postoji operator k
-1+4*(((6+2) ; greska na liniji 3 : fali )
-sin(pi/2+2) ; greska na liniji 4 : ne postoji operator s
-2* ; greska na liniji 35 : fali broj nakon operatora
-2^3^/2*2 ; greska na liniji 38 : ne postoji unarni operator /
-3++ ; greska na liniji 42 : fali broj nakon operatora
-4/5^2 = 0.159
-4/-5^2 = 0.159
-+4-3 = 1
-3.14 = 3.140
-0x3.24 = 3.140
-3++4 = 7
-4 + 7 = 11
-2^3^2*2 = 128
--5+6^2*4 = 139
-(((4+2)*(4+3)^2)+1) = 295
-0x12f = 303
-(56+87*5/5*7^(5-6))^2 = 4682.469
-7424548 = 7424548
+168/2 - 10^(13/3) = -21460.355
+5+6+?-4 ; greska na liniji 4 : ne postoji operator ?
+3+4+5+6 = 18
+15 *   5 - 53+3  = 25
+2+3+4+5+67 = 81
+23 + 3 * 13 + 4*(2+3)^2  = 162
