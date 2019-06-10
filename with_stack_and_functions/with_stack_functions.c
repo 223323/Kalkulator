@@ -3,27 +3,43 @@
 #include <stdlib.h>
 #include <math.h>
 
-// #define USE_FLOAT
 
-// PAZNJA: ne moze boolean algebra sa floating-om da radi
+#define USE_FLOAT
+
+// PAZNJA: ne moze boolean algebra sa decimalnim brojevima (USE_FLOAT) da radi
 // #define USE_BOOLEAN
 
 #ifdef USE_FLOAT
+
 typedef float NumType;
 #define VAL_FORMAT "%.2f"
+
 #else
 
 typedef int NumType;
 #define VAL_FORMAT "%d"
+
 #endif
 
 
 char error[100];
 
+
+#define BINARY 1
+#define UNARY 2
+#define FUNC 4
+#define VARIABLE 8
+
+typedef struct operator_t {
+	char* op;
+	int priority;
+	int type;
+} Operator;
+
 // stack i liste
 typedef struct list_elem {
 	NumType value;
-	char op;
+	Operator op;
 	struct list_elem *next;
 } list_elem;
 
@@ -32,15 +48,9 @@ typedef struct stack_t {
 	list_elem *top;
 } Stack;
 
-
-typedef struct operator_t {
-	char op;
-	int priority;
-	int unary;
-} Operator;
-
 Operator operators[];
-NumType eval_operator(char op, NumType num1, NumType num2);
+NumType eval_operator(Operator op, NumType num1, NumType num2);
+Operator null_op = {0,0,0};
 
 // inicijalizuje stek
 void stack_init(Stack* stack) {
@@ -53,7 +63,7 @@ int stack_empty(Stack* stack) {
 }
 
 // dodaje na stek
-void stack_push(Stack* stack, NumType value, char op) {
+void stack_push(Stack* stack, NumType value, Operator op) {
 	list_elem* new = malloc(sizeof(list_elem));
 	new->value = value;
 	new->op = op;
@@ -86,12 +96,11 @@ void list_init(List* list) {
 }
 
 // dodaje element na listu
-void list_append(List* list, NumType value, char op) {
+void list_append(List* list, NumType value, Operator op) {
 	list_elem* new = malloc(sizeof(list_elem));
 	new->value = value;
 	new->op = op;
 	new->next = 0;
-	
 	if(list->tail == 0) {
 		list->tail = list->head = new;
 	} else {
@@ -114,85 +123,40 @@ void list_reverse(List* list) {
 	list->head = prev;
 }
 
-#define F_UNARY 0x80
-
-
-// ----- NE PREKUCAVATI (osim ako se trazi ispis u odredjenoj notaciji) ------
-// ispisuje listu
-void list_dump(List list) {
-	list_elem* el = list.head;
-	while(el) {
-		if(el->op == 0) {
-			printf(VAL_FORMAT " ", el->value);
-		} else {
-			if(el->op & F_UNARY) {
-				printf("u%c ", el->op & ~F_UNARY);
-			} else {
-				printf("%c ", el->op);
-			}
-		}
-		el = el->next;
-	}
-	printf("\n");
-}
-
-// ispisuje stack preko f-je za stampanje liste
-void stack_dump(Stack* stk) {
-	List l;
-	l.head = stk->top;
-	list_reverse(&l);
-	list_dump(l);
-	list_reverse(&l);
-}
-// ------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // UVEK PREKUCATI
 // ==============================================================
 // broj operanda u zavisnosti da li je unarni ili ne
-int op_operands(char op) {
-	if(op & F_UNARY) {
+int op_operands(Operator op) {
+	if(op.type & (UNARY|FUNC)) {
 		return 1;
 	} else {
-		return 2;
+		if(op.type == VARIABLE) {
+			return 0;
+		} else {
+			return 2;
+		}
 	}
 }
 
 // pronaci operator
-Operator* op_get(char op) {
+Operator* op_get(char* op) {
 	Operator *o = operators;
-	while(o->op != 0 && o->op != op) {
+	while(o->op != 0 && strstr(op, o->op) != op) {
 		o++;
 	}
 	if(o->op != 0) {
-		o->unary = o->op & F_UNARY;
 		return o;
 	}
 	return 0;
 }
 
 // prioritet operatora
-int op_priority(char op) {
-	Operator *oper = op_get(op);
-	if(oper) {
-		return oper->priority;
-	}
-	return -1;
+int op_priority(Operator op) {
+	return op.priority + (op.type & (UNARY|FUNC|VARIABLE) ? 5 : 0);
 }
+
+
+#include "addons.h"
 
 List tokenize(char* expr, int is_infix) {
 	List res;
@@ -208,31 +172,39 @@ List tokenize(char* expr, int is_infix) {
 			expr++;
 			continue;
 		}
-		Operator *oper = op_get(c);
-		if (!oper) {
-			oper = op_get(c|F_UNARY);
-		}
+		Operator *oper = op_get(expr);
 		
 		if(oper) { // operator
-			char op = oper->op;
-			if(is_infix && isunary && op != '(' && op != ')') {
-				// proveriti da li postoji unarni operator
-				if(op_get(op|F_UNARY)) {
-					op |= F_UNARY;
+			Operator op = *oper;
+			
+			if(is_infix) {
+				if(oper->type == VARIABLE) {
+					isunary = 0;
 				} else {
-					sprintf(error, "ne postoji unarni operator %c\n", c);
+					if(isunary && c != '(' && c != ')') {
+						// proveriti da li postoji unarni operator
+						if(oper->type & (UNARY|FUNC)) {
+							op.type = UNARY;
+						} else {
+							sprintf(error, "ne postoji unarni operator %c\n", c);
+						}
+					} else {
+						op.type &= ~UNARY;
+					}
+					isunary = 1;
 				}
-				// printf("is unary \n");
 			}
-			isunary = 1;
-			if(op == '(') {
+
+			if(c == '(') {
 				brackets++;
-			} else if(op == ')') {
+			} else if(c == ')') {
 				isunary = 0;
 				brackets--;
 			}
 			
 			list_append(&res, 0, op);
+			expr += strlen(oper->op);
+			continue;
 		} else if(c >= '0' && c <= '9' || c == '.') { // broj
 			NumType r = 0;
 			int base = 10;
@@ -256,7 +228,7 @@ List tokenize(char* expr, int is_infix) {
 			}
 			// ---------------
 			
-			float zeros = 0; // sve sa zeros se moze izbaciti ukoliko se ne koriste decimalni brojevi
+			float zeros = 0;
 			while ((c=*expr) && ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || c == '.')) {
 				int n = c - '0';
 				if(c >= 'a' && c <= 'f') {
@@ -278,9 +250,7 @@ List tokenize(char* expr, int is_infix) {
 				expr++;
 			}
 			expr--;
-			
-			if(zeros == 0) zeros = 1;
-			list_append(&res, r / zeros, 0);
+			list_append(&res, r / fmax(1, zeros), null_op);
 			
 			// posle broja ne moze ici unarni operator
 			isunary = 0;
@@ -301,7 +271,6 @@ List tokenize(char* expr, int is_infix) {
 	return res;
 }
 
-
 // pretvara iz infiksne u postfiksnu ili prefiksnu notaciju u zavisnosti od parametra "to_prefix" koji mora imati vrednost ili 0 ili 1
 List infix_to_postprefix(List infix, int to_prefix) {
 	List res;
@@ -313,14 +282,14 @@ List infix_to_postprefix(List infix, int to_prefix) {
 	stack_init(&op_stack);
 	list_elem* el = infix.head;
 	while(el) {
-		if(el->op == 0) { // number
-			list_append(&res, el->value, 0);
+		if(el->op.op == 0) { // number
+			list_append(&res, el->value, null_op);
 		} else {
-			char op = el->op;
-			if(op == "()"[to_prefix]) { // (
+			Operator op = el->op;
+			if(op.op[0] == "()"[to_prefix]) { // (
 				stack_push(&op_stack, 0, op); // push '('
-			} else if(op == ")("[to_prefix]) { // )
-				while (!stack_empty(&op_stack) && stack_peek(&op_stack)->op != "()"[to_prefix]) {
+			} else if(op.op[0] == ")("[to_prefix]) { // )
+				while (!stack_empty(&op_stack) && stack_peek(&op_stack)->op.op[0] != "()"[to_prefix]) {
 					list_append(&res, 0, stack_peek(&op_stack)->op);
 					stack_pop(&op_stack);
 				}
@@ -356,29 +325,29 @@ List infix_to_postfix(List infix) {
 }
 // ==============================================================
 
-
-// PREKUCATI
-// izracunava postfiksnu notaciju (prekucati ukoliko se trazi izvrsavanje postfix notacije - skoro uvek treba)
 NumType eval_postfix(List postfix) {
 	Stack num_stack;
 	stack_init(&num_stack);
 	list_elem* el = postfix.head;
 	while(el) {
-		if(el->op != 0) {
-			NumType num1 = 0; // unarni operator ignorise num1
-			NumType num2 = stack_peek(&num_stack)->value;
-			stack_pop(&num_stack);
-			char op = el->op;
-			
+		if(el->op.op != 0) {
+			NumType num1=0, num2=0;
+			Operator op = el->op;
+			// printf("op %s %d\n", op.op, op_operands(op));
+			if(op_operands(op) > 0) {
+				num2 = stack_peek(&num_stack)->value;
+				stack_pop(&num_stack);
+			}
+
 			// ako nije unarni, uzeti jos jedan broj sa steka
 			if(op_operands(op) == 2) {
 				num1 = stack_peek(&num_stack)->value;
 				stack_pop(&num_stack);
 			}
 			
-			stack_push(&num_stack, eval_operator(op, num1, num2), 0);
+			stack_push(&num_stack, eval_operator(op, num1, num2), null_op);
 		} else {
-			stack_push(&num_stack, el->value, 0);
+			stack_push(&num_stack, el->value, null_op);
 		}
 		el = el->next;
 	}
@@ -387,133 +356,6 @@ NumType eval_postfix(List postfix) {
 	return res;
 }
 
-// NAJVEROVATNIJE NE TREBA PREKUCAVATI
-// izracunava direktno prefiksnu notaciju (prekucati ukoliko se bas trazi izvrsavanje prefix notacije, mislim da nece trebati)
-NumType eval_prefix(List prefix) {
-	Stack num_stack;
-	stack_init(&num_stack);
-	Stack op_stack;
-	stack_init(&op_stack);
-	list_elem* el = prefix.head;
-	int num = 0;
-	while(el) {
-		if(el->op != 0) {
-			stack_push(&op_stack, num+op_operands(el->op), el->op);
-		} else {
-			num++;
-			stack_push(&num_stack, el->value, 0);
-			
-			while(!stack_empty(&op_stack) && stack_peek(&op_stack)->value == num) {
-				char op = stack_peek(&op_stack)->op;
-				NumType num1 = 0;
-				NumType num2 = stack_peek(&num_stack)->value;
-				stack_pop(&num_stack);
-				
-				// ako nije unarni operator, uzeti jos jedan broj sa steka
-				if(op_operands(op) == 2) {
-					num1 = stack_peek(&num_stack)->value;
-					stack_pop(&num_stack);
-					num--;
-				}
-				stack_push(&num_stack, eval_operator(op, num1, num2), 0);
-				stack_pop(&op_stack);
-			}
-		}
-		el = el->next;
-	}
-	NumType res = stack_peek(&num_stack)->value;
-	stack_pop(&num_stack);
-	
-	return res;
-}
-
-/*
-// NE TREBA PREKUCAVATI
-int main() {
-	List lst;
-	list_init(&lst);
-
-	// lst = tokenize("(-5-75+-25)*(3^-9+5^2)", 1);
-	// lst = tokenize("(-5-75-25)*(3^-9+5^2)", 1);
-	// lst = tokenize("7-8-9", 1);
-	// lst = tokenize("7-8-9^(2---+-2)", 1);
-	error[0] = 0;
-	lst = tokenize("0b1111+(2+7^(2+1)*2)^2", 1);
-	if(strlen(error) > 0) {
-		printf("Greska tokenizacija: %s\n", error);
-		return 0;
-	}
-	
-	// lst = tokenize("!!0+!0*!1^!0");
-	lst = tokenize("15 2 7 2 1 + ^ 2 * + 2 ^ +", 0);
-	lst = tokenize("+ 15 ^ + 2 * ^ 7 + 2 1 2 2", 0);
-	list_dump(lst);
-	printf("postfix: %d\n", eval_postfix(lst));
-	return 0;
-	List postfix = infix_to_postfix(lst);
-	List prefix = infix_to_prefix(lst);
-	
-	printf("postfix: ");
-	list_dump(postfix);
-	printf("prefix: ");
-	list_dump(prefix);
-	
-	printf("postfix solution " VAL_FORMAT "\n", eval_postfix(postfix));
-	printf("prefix solution " VAL_FORMAT "\n", eval_prefix(prefix));
-}
-*/
-
-// PREKUCATI
-
-// baza = 8; // za oktalni
-// baza = 16; // za heksa
-// baza = 10; // za dekadni
-void broj_u_string(NumType broj, char* out, int baza, int decimale) {
-	int i=0,j=0;
-	char tmp[100];
-	tmp[0]=0;
-	long int broj_int = fabs(broj);
-	NumType broj_abs = fabs(broj);
-	
-	// celobrojni deo
-	while(broj_int > 0) {
-		int n = broj_int % baza;
-		tmp[i++] = n + ((n >= 10) ? -10+'a' : '0');
-		broj_int = broj_int / baza;
-	}
-	
-	j=0;
-	if (broj < 0) {
-		out[j++] = '-';
-	}
-	
-	if(broj_abs < 1) {
-		out[j++] = '0';
-	}
-	
-	int k;
-	for(k=0; k < i; k++) {
-		out[j++] = tmp[i-k-1];
-	}
-	
-	//--------------------------------
-	// decimalni deo (za floating point)
-	broj_int = broj_abs;
-	broj_abs -= broj_int;
-	
-	if(broj_abs > 0) {
-		out[j++] = '.';
-		while(decimale-- > 0) {
-			broj_abs *= (NumType)baza;
-			int n = broj_abs;
-			out[j++] = n + ((n >= 10) ? -10+'a' : '0');
-			broj_abs -= (long int)broj_abs;
-		}
-	}
-	//---------------------------------
-	
-	out[j] = 0;
-}
 
 #define MAX 100
 
@@ -545,17 +387,14 @@ void main( int argc, char *argv[]) {
 	int line=0,izr=0;
 	while(fgets(linija, MAX, f)) {
 		line++;
-		
 		// preskakanje linije
 		if(linija[0] == '\n') {
 			continue;
 		}
 		
 		error[0]=0;
-		
 		linija[strlen(linija)-1] = 0; // \n -> \0
 		// printf("calculating %s\n", linija);
-		
 		List tokens = tokenize(linija, 1);
 
 		// format:
@@ -571,7 +410,8 @@ void main( int argc, char *argv[]) {
 				char tmp[100];
 				
 				// TODO: promeniti ovde bazu za ispis u oktalnim i sl.
-				broj_u_string(rez, tmp, 10, 3);
+				// broj_u_string(rez, tmp, 10, 3);
+				sprintf(tmp, VAL_FORMAT, rez); // UKOLIKO se ne koristi broj_u_string
 				sprintf(linija, " = %s\n", tmp);
 			}
 		}
@@ -608,87 +448,3 @@ void main( int argc, char *argv[]) {
 	// ukoliko se koristi ispis u fajl
 	// fclose(f2);
 }
-
-
-
-
-
-
-
-
-
-// --------------------------------------------------------------
-// NORMALNA ALGEBRA (prekucaj ukoliko se koristi normalna algebra)
-#ifndef USE_BOOLEAN
-Operator operators[] =
-{
-	{'-', 2},
-	{'+', 2},
-	{'-'|F_UNARY, 5},
-	{'+'|F_UNARY, 5},
-	{'*', 3},
-	{'/', 3},
-	{'^', 4},
-	{'(', 1},
-	{')', 1},
-	{0,0}
-};
-
-NumType eval_operator(char op, NumType num1, NumType num2) {
-	switch((unsigned char)op) {
-		case '-':
-			return num1-num2;
-		case '+':
-			return num1+num2;
-		case '*':
-			return num1*num2;
-		case '/':
-			if(num2 == 0) {
-				sprintf(error, "deljenje sa 0\n");
-				return 99999;
-			}
-			return num1/num2;
-		case '^':
-			return pow(num1,num2);
-			
-		// unarni operatori
-		case '-'|F_UNARY:
-			return num1-num2;
-		case '+'|F_UNARY:
-			return num1+num2;
-	}
-}
-#endif
-// --------------------------------------------------------------
-
-
-
-// --------------------------------------------------------------
-// VERZIJA SA BULOVOM ALGEBROM (prekucaj ukoliko se koristi bulova algebra)
-#ifdef USE_BOOLEAN
-Operator operators[] =
-{
-	{'+', 2},
-	{'!'|F_UNARY, 5},
-	{'*', 3},
-	{'^', 4},
-	
-	{'(', 1},
-	{')', 1},
-	{0,0}
-};
-
-NumType eval_operator(char op, NumType num1, NumType num2) {
-	switch((unsigned char)op) {
-		case '!'|F_UNARY:
-			return !num2;
-		case '+':
-			return num1|num2;
-		case '*':
-			return num1&num2;
-		case '^':
-			return num1^num2;
-	}
-}
-#endif
-// --------------------------------------------------------------
