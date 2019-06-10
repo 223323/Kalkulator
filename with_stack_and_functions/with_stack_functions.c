@@ -163,7 +163,7 @@ List tokenize(char* expr, int is_infix) {
 	list_init(&res);
 	
 	int r=0;
-	int isunary = 1;
+	int isunary = is_infix;
 	int brackets = 0;
 	
 	while(*expr) {
@@ -332,12 +332,20 @@ NumType eval_postfix(List postfix) {
 			Operator op = el->op;
 			// printf("op %s %d\n", op.op, op_operands(op));
 			if(op_operands(op) > 0) {
+				if(stack_empty(&num_stack)) {
+					sprintf(error, "fali operand za operator %s\n", op.op);
+					return 0;
+				}
 				num2 = stack_peek(&num_stack)->value;
 				stack_pop(&num_stack);
 			}
 
 			// ako nije unarni, uzeti jos jedan broj sa steka
 			if(op_operands(op) == 2) {
+				if(stack_empty(&num_stack)) {
+					sprintf(error, "fali operand za operator %s\n", op.op);
+					return 0;
+				}
 				num1 = stack_peek(&num_stack)->value;
 				stack_pop(&num_stack);
 			}

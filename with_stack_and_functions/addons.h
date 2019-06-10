@@ -49,12 +49,20 @@ NumType eval_prefix(List prefix) {
 				NumType num1=0, num2=0;
 				
 				if(op_operands(op) > 0) {
+					if(stack_empty(&num_stack)) {
+						sprintf(error, "fali operand za operator %s\n", op.op);
+						return 0;
+					}
 					num2 = stack_peek(&num_stack)->value;
 					stack_pop(&num_stack);
 				}
 
 				// ako nije unarni, uzeti jos jedan broj sa steka
 				if(op_operands(op) == 2) {
+					if(stack_empty(&num_stack)) {
+						sprintf(error, "fali operand za operator %s\n", op.op);
+						return 0;
+					}
 					num1 = stack_peek(&num_stack)->value;
 					stack_pop(&num_stack);
 					num--;
