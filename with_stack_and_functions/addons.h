@@ -201,13 +201,13 @@ NumType eval_operator(Operator op, NumType num1, NumType num2) {
 #ifdef USE_BOOLEAN
 Operator operators[] =
 {
-	{'+', 2},
-	{'!', 0, UNARY},
-	{'*', 3},
-	{'^', 4},
+	{"+", 2},
+	{"!", 0, UNARY},
+	{"*", 3},
+	{"^", 4},
 	
-	{'(', 1},
-	{')', 1},
+	{"(", 1},
+	{")", 1},
 	{0,0}
 };
 
