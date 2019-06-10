@@ -221,9 +221,6 @@ List tokenize(char* expr, int is_infix) {
 				} else if(*expr == 'b') { // 0b.. binarni broj
 					base = 2;
 					expr++;
-				} else if(*expr != '.') {
-					sprintf(error, "greska broj\n");
-					return res;
 				}
 			}
 			// ---------------

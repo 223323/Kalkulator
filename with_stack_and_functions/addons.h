@@ -112,7 +112,9 @@ void broj_u_string(NumType broj, char* out, int baza, int decimale) {
 	broj_abs -= broj_int;
 	
 	if(broj_abs > 0) {
-		out[j++] = '.';
+		if(decimale > 0) {
+			out[j++] = '.';
+		}
 		while(decimale-- > 0) {
 			broj_abs *= (NumType)baza;
 			int n = broj_abs;
