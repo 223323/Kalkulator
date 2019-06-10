@@ -395,14 +395,22 @@ void main( int argc, char *argv[]) {
 		error[0]=0;
 		linija[strlen(linija)-1] = 0; // \n -> \0
 		// printf("calculating %s\n", linija);
-		List tokens = tokenize(linija, 1);
+		
+		// UKOLIKO U IZRAZI.TXT NIJE INFIX FORMAT, POSTAVITI OVO NA 0 I ISPOD PO POTREBI eval_postfix ZAMENITI SA eval_prefix KOJU TREBA UBACITI U addons.h
+		int infix_input = 1;
+		
+		List tokens = tokenize(linija, infix_input);
 
 		// format:
 		// <izraz> = <resenje>
 		strcpy(izrazi[izr].ispis, linija);
 		
 		if(error[0] == 0) {
-			NumType rez = eval_postfix(infix_to_postfix(tokens));
+			if(infix_input) {
+				tokens = infix_to_postfix(tokens);
+			}
+			
+			NumType rez = eval_postfix(tokens); // UKOLIKO SE TRAZI PREFIKSNA FORMA ZAMENITI sa eval_prefix
 			izrazi[izr].vrednost = rez;
 			
 			if(error[0] == 0) {
