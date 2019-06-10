@@ -74,6 +74,9 @@ NumType eval_prefix(List prefix) {
 		}
 		el = el->next;
 	}
+	if(!stack_empty(&op_stack)) {
+		sprintf(error, "fali operand za operator %s\n", stack_peek(&op_stack)->op.op);
+	}
 	NumType res = stack_peek(&num_stack)->value;
 	stack_pop(&num_stack);
 	

@@ -360,6 +360,11 @@ NumType eval_postfix(List postfix) {
 	}
 	NumType res = stack_peek(&num_stack)->value;
 	stack_pop(&num_stack);
+	
+	if(!stack_empty(&num_stack)) {
+		sprintf(error, "fali operator\n");
+	}
+	
 	return res;
 }
 
