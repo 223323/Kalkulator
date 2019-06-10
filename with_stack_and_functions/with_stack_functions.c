@@ -193,6 +193,8 @@ List tokenize(char* expr, int is_infix) {
 					}
 					isunary = 1;
 				}
+			} else {
+				op.type &= ~UNARY;
 			}
 
 			if(c == '(') {
@@ -405,7 +407,7 @@ void main( int argc, char *argv[]) {
 		int infix_input = 1;
 		
 		List tokens = tokenize(linija, infix_input);
-
+		
 		// format:
 		// <izraz> = <resenje>
 		strcpy(izrazi[izr].ispis, linija);
