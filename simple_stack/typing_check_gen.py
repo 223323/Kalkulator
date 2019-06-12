@@ -38,6 +38,6 @@ with open(sys.argv[1] if len(sys.argv) > 1 else "%s") as f:
 				print('line', i+1, 'error:', l[:-1])
 				break
 			line+=1
-	if line < len(ls): printf('missing', len(ls) - line, 'lines')
+	if line < len(ls): print('missing', len(ls) - line, 'lines')
 ''' % sys.argv[1]
 print(ins)
