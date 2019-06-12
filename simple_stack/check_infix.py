@@ -1,36 +1,38 @@
 ls=\
 '''
-65F246F1BC0E8420
-F0CFFB59FFBF338C
-B2F7FBC60EBFDFD1
-FDCFF83300B9F25C
-E5FF3EB2F3A3FFD7
-FB9FAAF765BBBAAF
-F28425064A2772EF
-24FB70B1D3DD50EB
-2DFAD3A4FDBDFFF0
-EFB159FF0DF0FD51
-74EDAFDDE7BBDB3D
-57FF77157FFB385F
-1FDF2C19FFA5D3FB
-EEB8020F30CF6EFC
-F56D7CF3FFFA0601
-FFF
+4PFM6AHt9eke12tT
+jQg-fJ5kfzZfLB70
+Xkf5ffEgveLahfO9
+fIYwfitqb2kED+l1
+GlffmkRffEnjf5E5
+f4RfKifsDu000Gaf
+f6k-6r-A6EHaF8rf
+IBfsW21+XngnKgjx
+9MfWg78ofrKMff9g
+jftF59ffOMfkfj+X
+lbjgK-7Z471XPX7E
+55fxDhF55ffyBD5f
+3f+n-Gp9fJ0BfjfX
+RgVaIoYQ7AFfAKfc
+H7EnxAYnfffCMEbj
+fff
 '''
 
 import sys
-cs = "0123456789ABCDEF"
+def lr(a,b): return list(range(ord(a),ord(b)+1))
+cs = ''.join(chr(i) for i in (lr('0','9') + lr('a','z') + lr('A','Z'))) + '+-*='
 ls = ls.replace('\n','')
-with open("infix.c") as f:
+with open(sys.argv[1] if len(sys.argv) > 1 else "infix.c") as f:
 	vals=[]
 	line = 0
 	for i,l in enumerate(f.readlines()):
-		l2 = l.replace('\t','').replace(' ', '')
+		l2 = l.lstrip().replace('\t','')
 		if l2.strip() != '':
 			a = sum([ord(i) for i in l2])
 			a = a ^ (a>>4) ^ (a>>8)
-			c = cs[a & 15]
+			c = cs[a & 63]
 			if(line < len(ls) and c != ls[line]):
-				print('line', i+1, 'error:', l)
+				print('line', i+1, 'error:', l[:-1])
+				break
 			line+=1
 
