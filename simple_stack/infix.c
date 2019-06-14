@@ -24,10 +24,7 @@ void push(Num num) {
 	stack = el;
 	stack_level++;
 }
-void push_op(char op) {
-	push(op);
-	stack->op = op;
-}
+
 Num top() {
 	return stack->num;
 }
@@ -52,12 +49,15 @@ int is_number(char c) {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || c == '.';
 }
 int is_operator(char c) {
-	return strchr("+-*/^()", (int)c) != 0;
+	return strchr("+-*/^()", (int)c & 0x7f) != 0;
 }
 
 int is_empty(char *s) {
 	while(isblank(*s++));
 	return *s == '\0';
+}
+int is_unary(char c) {
+	return (c & 0x80) == 0x80;
 }
 
 Num broj(char** p_expr) {
@@ -66,7 +66,7 @@ Num broj(char** p_expr) {
 	float zeros = 0;
 	char c;
 	char* expr = *p_expr;
-	// na osnovu prefiksa 0 ili 0x odrediti bazu
+
 	if (expr[i] == '0') {
 		base = 8;
 		i++;
@@ -96,29 +96,11 @@ Num broj(char** p_expr) {
 	return r / fmax(1, zeros);
 }
 
-void reverse(char* str) {
-	char *end = str + strlen(str) - 1;
-	while (str < end) {
-		*str ^= *end;
-		*end ^= *str;
-		*str ^= *end;
-		str++;
-		end--;
-	}
-}
-
-#define BINARY 1
-#define UNARY 2
-#define FUNC 4
-#define VARIABLE 8
-
 typedef struct operator_t {
 	char* op;
 	int priority;
 	int type;
 } Operator;
-
-
 
 int has_unary[] = {1,1,0,0,0,0,0};
 char ops[] = "-+*/^()";
@@ -136,6 +118,7 @@ void infix_to_postfix(char* infix, char* sol) {
 	int i;
 	char c;
 	int unary = 1;
+	int zag = 0;
 	for(i=0; c=*infix; infix++) {
 		if(is_number(c)) { // number
 			sol[i++] = c;
@@ -144,7 +127,9 @@ void infix_to_postfix(char* infix, char* sol) {
 			if(c == '(') {
 				push(c);
 				unary = 1;
+				zag++;
 			} else if(c == ')') {
+				zag--;
 				while (stack && top() != '(') {
 					sol[i++] = pop();
 				}
@@ -169,6 +154,11 @@ void infix_to_postfix(char* infix, char* sol) {
 			return;
 		}
 	}
+	if(zag != 0) {
+		sprintf(error, "fali zagrada\n", c);
+		while(stack)pop();
+		return;
+	}
 	while(stack) {
 		sol[i++] = pop();
 	}
@@ -176,10 +166,20 @@ void infix_to_postfix(char* infix, char* sol) {
 }
 
 Num postfix(char *s) {
+	while(stack)pop();
 	for(;*s; s++) {
 		char c = *s;
 		if(is_operator(c)) {
-			if(stack_level >= 2) {
+			if(is_unary(c) && stack_level >= 1) {
+				c &= ~0x80;
+				Num n1 = pop();
+				if(c == '+')
+					push(n1);
+				else if(c == '-')
+					push(-n1);
+			}
+			else 
+			if(!is_unary(c) && stack_level >= 2) {
 				Num n2 = pop();
 				Num n1 = pop();
 				if(c == '+')
@@ -199,19 +199,16 @@ Num postfix(char *s) {
 			}
 		} else if(is_number(c)) {
 			push(broj(&s));
-		} else if(!isspace(c)) {
-			sprintf(error, "nepoznati operator %c\n", c);
-			while(stack)pop();
-			return 0;
 		}
 	}
 	Num r = pop();
 	if(stack) {
-		printf("stack not empty\n");
 		while(stack)pop();
 	}
 	return r;
 }
+
+
 
 void main( int argc, char *argv[]) {
 	FILE* f = fopen(argv[1], "r");
@@ -231,18 +228,17 @@ void main( int argc, char *argv[]) {
 		linija[strlen(linija)-1] = 0; // \n -> \0
 
 		char tmp[100];
-		strcpy(izrazi[izr].ispis, linija);
 		infix_to_postfix(linija, tmp);
-		izrazi[izr].vrednost = postfix(tmp);
 		
 		if(error[0] == 0) {
-			sprintf(tmp, "%d", izrazi[izr].vrednost);
-			sprintf(linija, " = %s\n", tmp);
-		} else {
-			// ; <greska>
-			sprintf(linija, " ; greska na liniji %d : %s", line, error);
+			izrazi[izr].vrednost = postfix(tmp);
 		}
-		strcat(izrazi[izr].ispis, linija);
+		
+		if(error[0] == 0) {
+			sprintf(izrazi[izr].ispis, "%s = %d\n", linija, izrazi[izr].vrednost);
+		} else {
+			sprintf(izrazi[izr].ispis, "%s ; greska na liniji %d : %s", linija, line, error);
+		}
 		izr++;
 	}
 	fclose(f);
